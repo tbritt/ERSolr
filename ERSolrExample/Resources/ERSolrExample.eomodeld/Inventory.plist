@@ -1,0 +1,61 @@
+{
+    attributes = (
+        {columnName = cat; name = category; prototypeName = varcharLarge; }, 
+        {columnName = features; name = features; prototypeName = varcharLarge; }, 
+        {
+            allowsNull = N; 
+            externalType = string; 
+            name = id; 
+            prototypeName = id; 
+            userInfo = {indexed = true; multiValued = false; stored = true; }; 
+            valueClassName = NSString; 
+        }, 
+        {columnName = inStock; name = inStock; prototypeName = boolean; }, 
+        {columnName = manu; name = manufacturer; prototypeName = varcharLarge; }, 
+        {columnName = name; name = name; prototypeName = varcharLarge; }, 
+        {columnName = popularity; name = popularity; prototypeName = intNumber; }, 
+        {
+            columnName = price; 
+            externalType = float; 
+            name = price; 
+            prototypeName = doubleNumber; 
+            valueType = f; 
+        }, 
+        {columnName = sku; name = sku; prototypeName = varcharLarge; }, 
+        {
+            columnName = weight; 
+            externalType = float; 
+            name = weight; 
+            prototypeName = doubleNumber; 
+            valueType = f; 
+        }
+    ); 
+    attributesUsedForLocking = (
+        category, 
+        features, 
+        id, 
+        inStock, 
+        manufacturer, 
+        name, 
+        popularity, 
+        price, 
+        sku, 
+        weight
+    ); 
+    className = "er.solr.example.eo.Inventory"; 
+    classProperties = (
+        category, 
+        features, 
+        inStock, 
+        manufacturer, 
+        name, 
+        popularity, 
+        price, 
+        sku, 
+        weight
+    ); 
+    externalName = solr; 
+    fetchSpecificationDictionary = {}; 
+    name = Inventory; 
+    primaryKeyAttributes = (id); 
+}
