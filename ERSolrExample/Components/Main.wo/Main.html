@@ -9,6 +9,7 @@
 
 				<h2>ERSolr Example</h2>
 				
+				<div class="content">
 				<table>
 				    <tr>
 				        <th>PK</th>
@@ -22,7 +23,7 @@
 				        <th>Popularity</th>
 				        <th>Weight</th>
 				    </tr>
-				    <wo:loop list="$inventoryItems" item="$inventoryItem" index="$index">
+				    <wo:loop list="$displayGroup.filteredObjects" item="$inventoryItem" index="$index">
 				    <wo:genericContainer elementName="tr" class = "$rowClass">
 				        <td><wo:str value = "$inventoryItem.primaryKey" /></td>
 				        <td><wo:str value = "$inventoryItem.price" /></td>
@@ -37,5 +38,6 @@
 				    </wo:genericContainer>
 				    </wo:loop>
 				</table>
+				</div>
     </body>
 </html>

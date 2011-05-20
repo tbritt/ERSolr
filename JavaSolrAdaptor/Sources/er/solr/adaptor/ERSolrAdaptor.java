@@ -24,12 +24,12 @@ public class ERSolrAdaptor extends EOAdaptor {
 
     @Override
     public Class defaultExpressionClass() {
-        throw new UnsupportedOperationException("ERSolrAdaptor.defaultExpressionClass");
+        return ERSolrExpression.class;
     }
 
     @Override
     public EOSQLExpressionFactory expressionFactory() {
-        throw new UnsupportedOperationException("ERSolrAdaptor.expressionFactory");
+        return new ERSolrExpressionFactory(adaptorWithName(this.name()));
     }
 
     @Override

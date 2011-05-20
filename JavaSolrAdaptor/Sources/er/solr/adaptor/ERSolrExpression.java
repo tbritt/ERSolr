@@ -2,6 +2,7 @@ package er.solr.adaptor;
 
 import com.webobjects.eoaccess.EOAttribute;
 import com.webobjects.eoaccess.EOEntity;
+import com.webobjects.eoaccess.EOSQLExpression;
 import com.webobjects.eocontrol.EOAndQualifier;
 import com.webobjects.eocontrol.EOKeyComparisonQualifier;
 import com.webobjects.eocontrol.EOKeyValueQualifier;
@@ -9,21 +10,21 @@ import com.webobjects.eocontrol.EONotQualifier;
 import com.webobjects.eocontrol.EOOrQualifier;
 import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.foundation.NSArray;
-import com.webobjects.foundation.NSKeyValueCoding;
+import com.webobjects.foundation.NSMutableDictionary;
 import com.webobjects.foundation.NSSelector;
 
 import er.extensions.foundation.ERXStringUtilities;
 
-public class ERSolrExpression {
+public class ERSolrExpression extends EOSQLExpression {
     
+    public ERSolrExpression(EOEntity entity) {
+        super(entity);
+    }
+
     public static final String SOLR_EMPTY_QUALIFIER = "*:*";
     
-    private EOEntity _entity;
-    
-    private ERSolrExpression(){};
-    
     public static ERSolrExpression newERSolrExpression(EOEntity entity) {
-        ERSolrExpression solrExpression = new ERSolrExpression();
+        ERSolrExpression solrExpression = new ERSolrExpression(entity);
         solrExpression._entity = entity;
         return solrExpression;
     }
@@ -163,6 +164,11 @@ public class ERSolrExpression {
         }
         
         throw new IllegalStateException("solrStringForSelector:  Unknown operator: " + selector);
+    }
+
+    @Override
+    public NSMutableDictionary<String, Object> bindVariableDictionaryForAttribute(EOAttribute arg0, Object arg1) {
+        return new NSMutableDictionary<String, Object>();
     }
     
 }
