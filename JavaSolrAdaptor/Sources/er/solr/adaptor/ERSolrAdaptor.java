@@ -24,22 +24,22 @@ public class ERSolrAdaptor extends EOAdaptor {
 
     @Override
     public Class defaultExpressionClass() {
-        return ERSolrExpression.class;
+        return ERSolrExpression.class; // Should I throw? I don't really subclass EOSQLExpression
     }
 
     @Override
     public EOSQLExpressionFactory expressionFactory() {
-        return new ERSolrExpressionFactory(adaptorWithName(this.name()));
+        throw new UnsupportedOperationException("ERSolrAdaptor.expressionFactory");
     }
 
     @Override
     public com.webobjects.eoaccess.EOSchemaGeneration synchronizationFactory() {
-      throw new UnsupportedOperationException("ERSolrAdaptor.synchronizationFactory");
+        throw new UnsupportedOperationException("ERSolrAdaptor.synchronizationFactory");
     }
 
     @Override
     public com.webobjects.eoaccess.EOSynchronizationFactory schemaSynchronizationFactory() {
-      throw new UnsupportedOperationException("ERSolrAdaptor.schemaSynchronizationFactory");
+        throw new UnsupportedOperationException("ERSolrAdaptor.schemaSynchronizationFactory");
     }
 
     @Override

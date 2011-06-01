@@ -158,8 +158,13 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
         if (attributesToFetch == null) {
             throw new IllegalArgumentException("null attributes.");
         }
-        if (! (fetchSpecification instanceof ERXSolrFetchSpecification)) {
-            // TODO: Turn this back on.
+        
+        ERXSolrFetchSpecification solrFetchSpecification = null;
+        if (fetchSpecification instanceof ERXSolrFetchSpecification) {
+            solrFetchSpecification = (ERXSolrFetchSpecification)fetchSpecification;
+        }
+        else {
+            // TODO: Turn this back on?
             //throw new IllegalArgumentException("Fetch specification must be of type " + ERXSolrFetchSpecification.class.getName());
         }
         
@@ -186,23 +191,37 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             ERSolrExpression solrExpression = ERSolrExpression.newERSolrExpression(entity);
             String solrQueryString = solrExpression.solrStringForQualifier(qualifier);
             
-            System.out.println(" Original qualifier: " + qualifier);
-            System.out.println("         Solr query: " + solrQueryString);
-            
             SolrQuery solrQuery = new SolrQuery();
             solrQuery.setQuery(solrQueryString);
-            
-            // TODO: Use values form fetch spec
             solrQuery.setRows(Integer.MAX_VALUE);
+            
+            if (solrFetchSpecification != null) {
+                if (solrFetchSpecification.isBatching()) {
+                    Integer numberOfRowsPerBatch = solrFetchSpecification.batchSize() != null ? solrFetchSpecification.batchSize() : Integer.MAX_VALUE;
+                    solrQuery.setRows(numberOfRowsPerBatch);
+                
+                    Integer rowOffset = (solrFetchSpecification.batchNumber().intValue() * numberOfRowsPerBatch.intValue()) - numberOfRowsPerBatch;
+                    solrQuery.setStart(rowOffset);
+                }
+                // TODO
+            }
+            
+            
+            System.out.println(" Original qualifier: " + qualifier);
+            System.out.println("         Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
             
             CommonsHttpSolrServer solrServer = new CommonsHttpSolrServer(url.toURL());
             QueryResponse queryResponse = solrServer.query(solrQuery);
             
             if (log.isDebugEnabled()) {
                 log.debug("Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
-                log.debug("Solr query response time: " + queryResponse.getElapsedTime() + "ms");
+                log.debug("Solr response time: " + queryResponse.getElapsedTime() + "ms");
             }
             
+            if (solrFetchSpecification != null) {
+                ERXSolrFetchSpecification.Result result = new ERXSolrFetchSpecification.Result(queryResponse);
+                solrFetchSpecification.setResult(result);
+            }
             
             for (SolrDocument solrDoc : queryResponse.getResults()) {
                 NSMutableDictionary<String, Object> row = new NSMutableDictionary<String, Object>();
@@ -227,8 +246,6 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                 _fetchedRows.addObject(row);
                 // }
             }
-            
-            
         }
         catch (EOGeneralAdaptorException e) {
             throw e;

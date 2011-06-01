@@ -18,8 +18,8 @@ h2 {
 }
 
 div.content {
-    border-radius: 10px;
-    background: #FBFBFB;
+    border-radius: 8px;
+    background: white;
     padding: 20px;
     margin: 20px;
 }

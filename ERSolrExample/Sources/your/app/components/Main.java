@@ -2,50 +2,60 @@ package your.app.components;
 
 import com.webobjects.appserver.WOContext;
 import com.webobjects.appserver.WOResponse;
-import com.webobjects.eoaccess.EODatabaseDataSource;
 import com.webobjects.eocontrol.EOEditingContext;
-import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.foundation.NSArray;
 
-import er.extensions.batching.ERXBatchingDisplayGroup;
+import er.extensions.appserver.ERXDisplayGroup;
 import er.extensions.components.ERXComponent;
 import er.extensions.eof.ERXEC;
+import er.solr.ERXSolrFetchSpecification;
 import er.solr.example.eo.Inventory;
+import com.webobjects.appserver.WOActionResults;
 
-public class Main extends ERXComponent {
+public class Main extends BaseComponent {
 	
-    public int index;
     public Inventory _inventoryItem;
+    public int _rowIndex;
     
-    private ERXBatchingDisplayGroup<Inventory> _displayGroup;
+    private ERXDisplayGroup<Inventory> _displayGroup;
+    private ERXSolrFetchSpecification<Inventory> _fetchSpecification;
     
     public Main(WOContext context) {
 		super(context);
 	}
 	
-    public ERXBatchingDisplayGroup<Inventory> displayGroup() {
+    public ERXDisplayGroup<Inventory> displayGroup() {
         if (_displayGroup == null) {
-            EOEditingContext ec = ERXEC.newEditingContext();
-            EODatabaseDataSource dataSource = new EODatabaseDataSource(ec, Inventory.ENTITY_NAME);
-            _displayGroup = new ERXBatchingDisplayGroup<Inventory>();
-            _displayGroup.setDataSource(dataSource);
-            _displayGroup.setNumberOfObjectsPerBatch(5);
-            _displayGroup.fetch();
+            _displayGroup = new ERXDisplayGroup<Inventory>();
         }
+        _displayGroup.setObjectArray(fetchSpecification().result().objects());
         return _displayGroup;
     }
     
     @Override
 	public void appendToResponse(WOResponse response, WOContext context) {
-	    EOQualifier qualifier = null;
-        
-        //qualifier = Inventory.NAME.contains("iPod");
-        
-	    
-        super.appendToResponse(response, context);
+	    super.appendToResponse(response, context);
 	}
 	
 	public String rowClass() {
-	    return (index % 2) == 0 ? "" : "alternate";
+	    return (_rowIndex % 2) == 0 ? "" : "alternate";
 	}
+	
+	public WOActionResults selectBatch() {
+        return null;
+    }
+	
+	public ERXSolrFetchSpecification<Inventory> fetchSpecification() {
+	    if (_fetchSpecification == null) {
+	        _fetchSpecification = new ERXSolrFetchSpecification<Inventory>(Inventory.ENTITY_NAME);
+	        _fetchSpecification.setBatchSize(Integer.valueOf(5));
+	    }
+	    return _fetchSpecification;
+	}
+
+    public Integer maxNumberOfObjects() {
+        return Integer.valueOf(fetchSpecification().result().totalCount().intValue());
+    }
+
+    
 }

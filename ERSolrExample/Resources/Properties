@@ -4,7 +4,7 @@ dbConnectURLGLOBAL=http://127.0.0.1:8983/solr/
 log4j.logger.er=ERROR
 
 
-
+er.extensions.ERXApplication.DefaultEncoding=UTF-8
 
 
 # OGNL
