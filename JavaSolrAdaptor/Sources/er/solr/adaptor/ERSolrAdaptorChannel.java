@@ -198,12 +198,19 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             if (solrFetchSpecification != null) {
                 if (solrFetchSpecification.isBatching()) {
                     Integer numberOfRowsPerBatch = solrFetchSpecification.batchSize() != null ? solrFetchSpecification.batchSize() : Integer.MAX_VALUE;
-                    solrQuery.setRows(numberOfRowsPerBatch);
-                
                     Integer rowOffset = (solrFetchSpecification.batchNumber().intValue() * numberOfRowsPerBatch.intValue()) - numberOfRowsPerBatch;
                     solrQuery.setStart(rowOffset);
+                    solrQuery.setRows(numberOfRowsPerBatch);
                 }
-                // TODO
+                
+                if (solrFetchSpecification.maxTime() != null) {
+                    solrQuery.setTimeAllowed(solrFetchSpecification.maxTime());
+                }
+                
+                
+                
+                // TODO: FACETS
+                
             }
             
             
