@@ -1,16 +1,13 @@
 package your.app.components;
 
+import com.webobjects.appserver.WOActionResults;
 import com.webobjects.appserver.WOContext;
 import com.webobjects.appserver.WOResponse;
-import com.webobjects.eocontrol.EOEditingContext;
-import com.webobjects.foundation.NSArray;
 
 import er.extensions.appserver.ERXDisplayGroup;
-import er.extensions.components.ERXComponent;
-import er.extensions.eof.ERXEC;
+import er.extensions.appserver.ERXRequest;
 import er.solr.ERXSolrFetchSpecification;
 import er.solr.example.eo.Inventory;
-import com.webobjects.appserver.WOActionResults;
 
 public class Main extends BaseComponent {
 	
@@ -52,10 +49,9 @@ public class Main extends BaseComponent {
 	    }
 	    return _fetchSpecification;
 	}
-
+	
     public Integer maxNumberOfObjects() {
         return Integer.valueOf(fetchSpecification().result().totalCount().intValue());
     }
-
     
 }

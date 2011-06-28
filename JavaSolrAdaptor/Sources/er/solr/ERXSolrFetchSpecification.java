@@ -8,6 +8,7 @@ import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSDictionary;
+import com.webobjects.foundation.NSMutableArray;
 
 import er.extensions.eof.ERXEC;
 import er.extensions.eof.ERXFetchSpecification;
@@ -15,21 +16,23 @@ import er.extensions.eof.ERXKey;
 import er.extensions.foundation.ERXStringUtilities;
 
 
-public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERXFetchSpecification {
+public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERXFetchSpecification implements SolrFacet.Delegate {
 
     private NSArray<EOSortOrdering> _sortOrderings;
     private NSArray<ERXKey<T>> _statisticsAttributes;
-    private NSArray<SolrFacet> _facets;
+    private NSMutableArray<SolrFacet> _facets;
     private EOQualifier _qualifier;
     private EOEditingContext _editingContext;
     private Integer _maxTime;
-    private Integer _minFacetSize;
+    private Integer _defaultMinFacetSize;
+    private Integer _defaultFacetLimit;
     private Integer _batchSize;
     private Integer _batchNumber;
     private Result _result;
     
     public ERXSolrFetchSpecification(String entityName, EOQualifier qualifier, NSArray sortOrderings, EOEditingContext editingContext) {
         super(entityName, qualifier, sortOrderings);
+        _facets = new NSMutableArray<SolrFacet>();
         _editingContext = editingContext;
     }
     
@@ -39,6 +42,13 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
     
     public ERXSolrFetchSpecification(String entityName) {
         this(entityName, null, null);
+    }
+    
+    /**
+     * SolrFacet.Delegate method. 
+     */
+    public void facetDidChange() {
+        queryDidChange(true);
     }
     
     /**
@@ -86,14 +96,22 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
      * @return the facets
      */
     public NSArray<SolrFacet> facets() {
-        return _facets;
+        return _facets.immutableClone();
     }
 
     /**
-     * @param facets the facets to set. Will result in a new fetch.
+     * @param facet the facet to add. Will result in a new fetch.
      */
-    public void setFacets(NSArray<SolrFacet> facets) {
-        _facets = facets;
+    public void addFacet(SolrFacet facet) {
+        _facets.addObject(facet);
+        queryDidChange(true);
+    }
+    
+    /**
+     * @param facet the facet to remove. Will result in a new fetch.
+     */
+    public void removeFacet(SolrFacet facet) {
+        _facets.removeObject(facet);
         queryDidChange(true);
     }
 
@@ -128,7 +146,7 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
 
     /**
      * Specified in milliseconds.
-     * @return the maxTime
+     * @return the maxTime in milliseconds.
      */
     public Integer maxTime() {
         return _maxTime;
@@ -136,7 +154,7 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
 
     /**
      * Maximum mount of time allowed for the fetch. Specified in milliseconds.
-     * @param maxTime the maxTime to set
+     * @param maxTime the maxTime to set in milliseconds.
      */
     public void setMaxTime(Integer maxTime) {
         _maxTime = maxTime;
@@ -145,17 +163,37 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
     /**
      * @return the minFacetSize
      */
-    public Integer minFacetSize() {
-        return _minFacetSize;
+    public Integer defaultMinFacetSize() {
+        return _defaultMinFacetSize;
     }
 
     /**
      * The minimum number of facet items a facet must have to be included in the results. Will result in new fetch.
      * @param minFacetSize the minFacetSize to set
      */
-    public void setMinFacetSize(Integer minFacetSize) {
-        _minFacetSize = minFacetSize;
-        queryDidChange(false);
+    public void setDefaultMinFacetSize(Integer minFacetSize) {
+        if (_defaultMinFacetSize != minFacetSize) {
+            _defaultMinFacetSize = minFacetSize;
+            queryDidChange(false);
+        }
+    }
+    
+    /**
+     * @return the facetLimit
+     */
+    public Integer defaultFacetLimit() {
+        return _defaultFacetLimit;
+    }
+
+    /**
+     * The maximum number of facet items included in the results. Will result in new fetch.
+     * @param facetLimit the facetLimit to set
+     */
+    public void setDefaultFacetLimit(Integer facetLimit) {
+        if (_defaultFacetLimit != facetLimit) {
+            _defaultFacetLimit = facetLimit;
+            queryDidChange(false);
+        }
     }
 
     /**
@@ -196,8 +234,10 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
     }
 
     protected void fetch() {
-        NSArray<T> objects = _editingContext.objectsWithFetchSpecification(this);
-        _result._objects = objects;
+        NSArray objects = _editingContext.objectsWithFetchSpecification(this);
+        if (_result != null) {
+            _result._objects = objects;
+        }
     }
     
     public void setResult(Result<T> result) {
@@ -226,8 +266,10 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
         
         private Result(){};
         
-        public Result(QueryResponse queryResponse) {
-            _queryResponse = queryResponse;
+        public static Result newResult(QueryResponse queryResponse) {
+            Result result = new Result();
+            result._queryResponse = queryResponse;
+            return result;
         }
 
         public Long totalCount() {
@@ -243,4 +285,5 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
         }
         
     }
+    
 }

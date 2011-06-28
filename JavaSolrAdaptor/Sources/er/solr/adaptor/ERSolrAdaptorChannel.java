@@ -1,5 +1,6 @@
 package er.solr.adaptor;
 
+import java.util.Enumeration;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -7,6 +8,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.params.FacetParams;
 
 import com.webobjects.eoaccess.EOAdaptorChannel;
 import com.webobjects.eoaccess.EOAdaptorContext;
@@ -27,6 +29,7 @@ import com.webobjects.foundation.NSMutableDictionary;
 import er.extensions.foundation.ERXMutableURL;
 import er.extensions.foundation.ERXStringUtilities;
 import er.solr.ERXSolrFetchSpecification;
+import er.solr.SolrFacet;
 
 
 public class ERSolrAdaptorChannel extends EOAdaptorChannel {
@@ -196,6 +199,11 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             solrQuery.setRows(Integer.MAX_VALUE);
             
             if (solrFetchSpecification != null) {
+                if (solrFetchSpecification.maxTime() != null) {
+                    solrQuery.setTimeAllowed(solrFetchSpecification.maxTime());
+                }
+                
+                // Batching
                 if (solrFetchSpecification.isBatching()) {
                     Integer numberOfRowsPerBatch = solrFetchSpecification.batchSize() != null ? solrFetchSpecification.batchSize() : Integer.MAX_VALUE;
                     Integer rowOffset = (solrFetchSpecification.batchNumber().intValue() * numberOfRowsPerBatch.intValue()) - numberOfRowsPerBatch;
@@ -203,14 +211,68 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                     solrQuery.setRows(numberOfRowsPerBatch);
                 }
                 
-                if (solrFetchSpecification.maxTime() != null) {
-                    solrQuery.setTimeAllowed(solrFetchSpecification.maxTime());
+                // Facets
+                if (solrFetchSpecification.facets() != null && solrFetchSpecification.facets().count() > 0) {
+                    solrQuery.setFacet(true);
+                    
+                    if (solrFetchSpecification.defaultMinFacetSize() != null) {
+                        solrQuery.setFacetMinCount(solrFetchSpecification.defaultMinFacetSize());
+                    }
+                    
+                    if (solrFetchSpecification.defaultFacetLimit() != null) {
+                        solrQuery.setFacetLimit(solrFetchSpecification.defaultFacetLimit());
+                    }
+                    
+                    for (Enumeration e = solrFetchSpecification.facets().objectEnumerator(); e.hasMoreElements();) {
+                        SolrFacet facet = (SolrFacet)e.nextElement();
+                        
+                        // Arbitrary query facets
+                        if (facet.isQuery()) {
+                            for (Enumeration itemEnumerator = facet.items().objectEnumerator(); itemEnumerator.hasMoreElements();) {
+                                SolrFacet.Item item = (SolrFacet.Item)itemEnumerator.nextElement();
+                                if (item.qualifier() != null) {
+                                    solrQuery.setParam(FacetParams.FACET_QUERY, solrExpression.solrStringForQualifier(item.qualifier()));
+                                }
+                            }
+                        }
+                        
+                        // Field value facets
+                        else {
+                            solrQuery.setParam(FacetParams.FACET_FIELD, facet.attribute().key());
+                            
+                            if (facet.sort() != null && facet.sort().solrValue() != null) {
+                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_SORT), facet.sort().solrValue());
+                            }
+                            
+                            if (facet.minCount() != null) {
+                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_MINCOUNT), String.valueOf(facet.minCount()));
+                            }
+                            
+                            if (facet.limit() != null) {
+                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_LIMIT), String.valueOf(facet.limit()));
+                            }
+                        }
+                        
+                        
+                        
+                        
+                        // Create filter query based on selected facet items.
+                        if (facet.selectedItems() != null && facet.selectedItems().count() > 0) {
+                            
+                        }
+                        /*
+                        if (isMultiValue() && Operator.And.equals(operator())) {
+                            query.addFacetField(key());
+                        }
+                        else {
+                            query.addFacetField(exclusionTag() + key());
+                        }
+                        */
+                        
+                        //TODO
+                    }
+                    
                 }
-                
-                
-                
-                // TODO: FACETS
-                
             }
             
             
@@ -226,8 +288,10 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             }
             
             if (solrFetchSpecification != null) {
-                ERXSolrFetchSpecification.Result result = new ERXSolrFetchSpecification.Result(queryResponse);
+                ERXSolrFetchSpecification.Result result = ERXSolrFetchSpecification.Result.newResult(queryResponse);
                 solrFetchSpecification.setResult(result);
+                //TODO: facets
+                
             }
             
             for (SolrDocument solrDoc : queryResponse.getResults()) {
