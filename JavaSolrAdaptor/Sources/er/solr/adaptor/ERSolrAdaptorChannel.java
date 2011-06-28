@@ -9,6 +9,7 @@ import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.params.FacetParams;
+import org.apache.solr.common.params.SolrParams;
 
 import com.webobjects.eoaccess.EOAdaptorChannel;
 import com.webobjects.eoaccess.EOAdaptorContext;
@@ -25,11 +26,13 @@ import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSKeyValueCoding;
 import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
+import com.webobjects.foundation.NSValueUtilities;
 
 import er.extensions.foundation.ERXMutableURL;
 import er.extensions.foundation.ERXStringUtilities;
 import er.solr.ERXSolrFetchSpecification;
 import er.solr.SolrFacet;
+import er.solr.SolrFacet.Operator;
 
 
 public class ERSolrAdaptorChannel extends EOAdaptorChannel {
@@ -238,44 +241,87 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                             solrQuery.setParam("f." + facet.key() + "." + (FacetParams.FACET_LIMIT), String.valueOf(facet.limit()));
                         }
                         
+                        
+                        // A selected facet item can be excluded from the counts for other facet items, this is important
+                        // for supporting multiple selection. The only case where it should not be excluded is when the 
+                        // facet attribute is multi-value and the face operator is AND.
+                        boolean isExcludingFromCounts = true;
+                        EOAttribute facetAttribute = entity.attributeNamed(facet.key());
+                        Object isMultiValue = facetAttribute.userInfo().valueForKey("isMultiValue");
+                        if (NSValueUtilities.booleanValueWithDefault(isMultiValue, false) && SolrFacet.Operator.AND.equals(facet.operator())) {
+                            isExcludingFromCounts = false;
+                        }
+                        
+                        
                         // Arbitrary query facets
                         if (facet.isQuery()) {
                             for (Enumeration qualifierKeyEnumeration = facet.qualifierKeys().objectEnumerator(); qualifierKeyEnumeration.hasMoreElements();) {
                                 String qualifierKey = (String)qualifierKeyEnumeration.nextElement();
+                                NSMutableDictionary<String, String> parameters = new NSMutableDictionary<String, String>();
+                                
+                                // Set parameter on qualifier with its key so it can be pulled out of the results by the same key:
+                                // facet.query={!key=qualifierKey}some_query
+                                parameters.takeValueForKey(qualifierKey, ERSolrExpression.PARAMETER_KEY);
+                                
+                                if (isExcludingFromCounts) {
+                                    parameters.takeValueForKey(qualifierKey, ERSolrExpression.PARAMETER_EXCLUSION);
+                                }
+                                
+                                StringBuilder sb = new StringBuilder();
+                                ERSolrExpression.appendLocalParams(sb, parameters);
                                 EOQualifier facetQualifier = facet.qualifierForKey(qualifierKey);
-                                //TODO: set label to the qual's key:  facet.field={!ex=dt key=mylabel}doctype
-                                solrQuery.setParam(FacetParams.FACET_QUERY, solrExpression.solrStringForQualifier(facetQualifier));
+                                sb.append(solrExpression.solrStringForQualifier(facetQualifier));
+                                solrQuery.setParam(FacetParams.FACET_QUERY, sb.toString());
                             }
                         }
                         
+                        
                         // Field value facets
                         else {
-                            solrQuery.setParam(FacetParams.FACET_FIELD, facet.key());  
+                            StringBuilder sb = new StringBuilder();
+                            if (isExcludingFromCounts) {
+                                ERSolrExpression.appendLocalParams(sb, new NSDictionary<String, String>(facet.key(), ERSolrExpression.PARAMETER_EXCLUSION));  
+                            }
+                            sb.append(facet.key());
+                            solrQuery.addFacetField(sb.toString());
                         }
-                        
-                        
                         
                         
                         // Create filter query based on selected facet items.
                         if (facet.selectedItems() != null && facet.selectedItems().count() > 0) {
+                            StringBuilder filterQuery = new StringBuilder();
                             
+                            if (isExcludingFromCounts) {
+                                ERSolrExpression.appendLocalParams(filterQuery, new NSDictionary<String, String>(facet.key(), ERSolrExpression.PARAMETER_TAG));
+                            }
+                            
+                            filterQuery.append("(");
+                            for (Enumeration facetItemEnumeration = facet.selectedItems().objectEnumerator(); facetItemEnumeration.hasMoreElements();) {
+                                Object selectedFacetItem = facetItemEnumeration.nextElement();
+                                String operator = null; 
+                                if (SolrFacet.Operator.NOT.equals(facet.operator())) {
+                                    filterQuery.append(SolrFacet.Operator.NOT.toString()).append(" ");
+                                    operator = SolrFacet.Operator.AND.toString();
+                                }
+                                else {
+                                    operator = facet.operator().toString();
+                                }
+                                
+                                filterQuery.append(facet.key()).append(":");
+                                ERSolrExpression.escapeAndAppend(selectedFacetItem, filterQuery);
+                                
+                                if (facetItemEnumeration.hasMoreElements()) {
+                                    filterQuery.append(" ").append(operator).append(" ");
+                                }
+                            }
+                            filterQuery.append(")");
+                            solrQuery.addFilterQuery(filterQuery.toString());
                         }
-                        /*
-                        if (isMultiValue() && Operator.And.equals(operator())) {
-                            query.addFacetField(key());
-                        }
-                        else {
-                            query.addFacetField(exclusionTag() + key());
-                        }
-                        */
-                        
-                        //TODO
                     }
-                    
                 }
             }
             
-            
+            //TODO: remove
             System.out.println(" Original qualifier: " + qualifier);
             System.out.println("         Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
             

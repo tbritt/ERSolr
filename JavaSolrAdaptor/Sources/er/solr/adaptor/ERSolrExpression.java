@@ -1,5 +1,7 @@
 package er.solr.adaptor;
 
+import java.util.Enumeration;
+
 import com.webobjects.eoaccess.EOAttribute;
 import com.webobjects.eoaccess.EOEntity;
 import com.webobjects.eoaccess.EOSQLExpression;
@@ -10,6 +12,7 @@ import com.webobjects.eocontrol.EONotQualifier;
 import com.webobjects.eocontrol.EOOrQualifier;
 import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.foundation.NSArray;
+import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSMutableDictionary;
 import com.webobjects.foundation.NSSelector;
 
@@ -22,11 +25,34 @@ public class ERSolrExpression extends EOSQLExpression {
     }
 
     public static final String SOLR_EMPTY_QUALIFIER = "*:*";
+    public static final String PARAMETER_EXCLUSION = "ex";
+    public static final String PARAMETER_TAG = "tag";
+    public static final String PARAMETER_KEY = "key";
     
     public static ERSolrExpression newERSolrExpression(EOEntity entity) {
         ERSolrExpression solrExpression = new ERSolrExpression(entity);
         solrExpression._entity = entity;
         return solrExpression;
+    }
+    
+    public static StringBuilder escapeAndAppend(Object value, StringBuilder sb) {
+        sb.append("\"");
+        sb.append(ERXStringUtilities.escape(new char[] { '\"' }, '\\', String.valueOf(value)));
+        sb.append("\"");
+        return sb;
+    }
+    
+    public static StringBuilder appendLocalParams(StringBuilder sb, NSDictionary<String, String> attributes) {
+        if (attributes != null) {    
+            sb.append("{!");
+            for (Enumeration e = attributes.allKeys().objectEnumerator(); e.hasMoreElements();) {
+                String attributeKey = (String)e.nextElement();
+                String attributeValue = (String)attributes.valueForKey(attributeKey);
+                sb.append(attributeKey).append("=").append(attributeValue).append(" ");
+            }
+            sb.append("}");
+        }
+        return sb;
     }
     
     public String solrStringForQualifier(EOQualifier qualifier) {
