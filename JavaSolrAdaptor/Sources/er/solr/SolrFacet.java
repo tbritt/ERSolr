@@ -1,26 +1,25 @@
 package er.solr;
 
-import java.util.Enumeration;
-
 import org.apache.solr.common.params.FacetParams;
 
 import com.webobjects.eocontrol.EOQualifier;
-import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
+import com.webobjects.foundation.NSDictionary;
+import com.webobjects.foundation.NSMutableDictionary;
 import com.webobjects.foundation.NSMutableSet;
 
-import er.extensions.eof.ERXKey;
+import er.solr.ERXSolrFetchSpecification.Result;
 
 public class SolrFacet {
     
     private Delegate _delegate;
     private Operator _operator;
-    private ERXKey _attribute;
+    private String _key;
     private Sort _sort;
     private Integer _minCount;
     private Integer _limit;
-    private NSArray<Item> _items;
-    private NSMutableSet<Item> _selectedItems;
+    private NSMutableDictionary<String, EOQualifier> _qualifiers;
+    private NSMutableSet<Object> _selectedItems;
     
     public static interface Delegate {
         public void facetDidChange();
@@ -55,86 +54,25 @@ public class SolrFacet {
         }
     }
     
-    public static class Item {
-        private Object _value;
-        private Integer _count;
-        private EOQualifier _qualifier;
-        
-        private Item(){}
-        
-        public static Item newItem(Object value, EOQualifier qualifier) {
-            Item item = new Item();
-            item._value = value;
-            item._qualifier = qualifier;
-            return item;
-        }
-        
-        /**
-         * @return the value
-         */
-        public Object value() {
-            return _value;
-        }
-        
-        /**
-         * @return the qualifier
-         */
-        public EOQualifier qualifier() {
-            return _qualifier;
-        }
-
-        /**
-         * @return the count
-         */
-        public Integer count() {
-            return _count;
-        }
-        
-        /**
-         * @param count the count to set
-         */
-        public void setCount(Integer count) {
-            _count = count;
-        }
-
+    private SolrFacet() {
+        _selectedItems = new NSMutableSet<Object>();
+        _qualifiers = new NSMutableDictionary<String, EOQualifier>();
     }
     
-    private SolrFacet(){
-        _selectedItems = new NSMutableSet<SolrFacet.Item>();
-    };
-    
-    public static SolrFacet newSolrFacet() {
-        return newSolrFacet(null, null);
+    public static SolrFacet newSolrFacet(String key) {
+        return newSolrFacet(key, null);
     }
     
-    public static SolrFacet newSolrFacet(Delegate delegate) {
-        return newSolrFacet(delegate, null);
-    }
-    
-    public static SolrFacet newSolrFacet(Delegate delegate, NSArray<Item> items) {
+    public static SolrFacet newSolrFacet(String key, Delegate delegate) {
         SolrFacet solrFacet = new SolrFacet();
         solrFacet._delegate = delegate;
-        solrFacet._items = items;
         return solrFacet;
     }
-    
+
     protected void facetDidChange() {
         if (_delegate != null) _delegate.facetDidChange();
     }
     
-    /**
-     * @return true if the facet is a query facet
-     */
-    public boolean isQuery() {
-        for (Enumeration itemEnumerator = items().objectEnumerator(); itemEnumerator.hasMoreElements();) {
-            SolrFacet.Item item = (SolrFacet.Item)itemEnumerator.nextElement();
-            if (item.qualifier() != null) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * The facet's current operator. Defaults to Operator.OR.
      */
@@ -150,39 +88,39 @@ public class SolrFacet {
         facetDidChange();
     }
 
-    public ERXKey attribute() {
-        return _attribute;
-    }
-    
-    /**
-     * @return the items
-     */
-    public NSArray<Item> items() {
-        if (_items == null) return NSArray.EmptyArray;
-        return _items.immutableClone();
+    public String key() {
+        return _key;
     }
     
     /**
      * @return the selectedItems
      */
-    public NSArray<Item> selectedItems() {
+    public NSArray<Object> selectedItems() {
         return _selectedItems.allObjects();
     }
 
-    public void selectItem(Item item) {
+    public void selectItem(Object item) {
         if (item != null) {
             _selectedItems.addObject(item);
             facetDidChange();
         }
     }
 
-    public void deselectItem(Item item) {
+    public void deselectItem(Object item) {
         if (item != null) {
             _selectedItems.removeObject(item);
             facetDidChange();
         }
     }
 
+    /**
+     * Returns an NSdictionary where the key is the item and the value is the count.
+     */
+    public NSArray<NSDictionary <Object, Integer>> itemCounts(Result result) {
+        //TODO
+        return NSArray.EmptyArray;
+    }
+    
     /**
      * @return the sort
      */
@@ -227,7 +165,29 @@ public class SolrFacet {
         _limit = limit;
         facetDidChange();
     }
+    
+    public boolean isQuery() {
+        return _qualifiers.count() > 0;
+    }
+    
+    public EOQualifier qualifierForKey(String key) {
+        return (EOQualifier) _qualifiers.valueForKey(key);
+    }
+    
+    public NSArray<String> qualifierKeys() {
+        return _qualifiers.allKeys();
+    }
+    
+    public void addQualifierForKey(EOQualifier qualifier, String key) {
+        _qualifiers.takeValueForKey(qualifier, key);
+        facetDidChange();
+    }
 
+    public void removeQualifierForKey(String key) {
+        _qualifiers.removeObjectForKey(key);
+        facetDidChange();
+    }
+    
     /**
      * @return the delegate
      */

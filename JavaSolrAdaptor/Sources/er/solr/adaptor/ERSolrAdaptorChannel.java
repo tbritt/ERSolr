@@ -226,31 +226,31 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                     for (Enumeration e = solrFetchSpecification.facets().objectEnumerator(); e.hasMoreElements();) {
                         SolrFacet facet = (SolrFacet)e.nextElement();
                         
+                        if (facet.sort() != null && facet.sort().solrValue() != null) {
+                            solrQuery.setParam("f." + facet.key() + "." + (FacetParams.FACET_SORT), facet.sort().solrValue());
+                        }
+                        
+                        if (facet.minCount() != null) {
+                            solrQuery.setParam("f." + facet.key() + "." + (FacetParams.FACET_MINCOUNT), String.valueOf(facet.minCount()));
+                        }
+                        
+                        if (facet.limit() != null) {
+                            solrQuery.setParam("f." + facet.key() + "." + (FacetParams.FACET_LIMIT), String.valueOf(facet.limit()));
+                        }
+                        
                         // Arbitrary query facets
                         if (facet.isQuery()) {
-                            for (Enumeration itemEnumerator = facet.items().objectEnumerator(); itemEnumerator.hasMoreElements();) {
-                                SolrFacet.Item item = (SolrFacet.Item)itemEnumerator.nextElement();
-                                if (item.qualifier() != null) {
-                                    solrQuery.setParam(FacetParams.FACET_QUERY, solrExpression.solrStringForQualifier(item.qualifier()));
-                                }
+                            for (Enumeration qualifierKeyEnumeration = facet.qualifierKeys().objectEnumerator(); qualifierKeyEnumeration.hasMoreElements();) {
+                                String qualifierKey = (String)qualifierKeyEnumeration.nextElement();
+                                EOQualifier facetQualifier = facet.qualifierForKey(qualifierKey);
+                                //TODO: set label to the qual's key:  facet.field={!ex=dt key=mylabel}doctype
+                                solrQuery.setParam(FacetParams.FACET_QUERY, solrExpression.solrStringForQualifier(facetQualifier));
                             }
                         }
                         
                         // Field value facets
                         else {
-                            solrQuery.setParam(FacetParams.FACET_FIELD, facet.attribute().key());
-                            
-                            if (facet.sort() != null && facet.sort().solrValue() != null) {
-                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_SORT), facet.sort().solrValue());
-                            }
-                            
-                            if (facet.minCount() != null) {
-                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_MINCOUNT), String.valueOf(facet.minCount()));
-                            }
-                            
-                            if (facet.limit() != null) {
-                                solrQuery.setParam("f." + facet.attribute().dot(FacetParams.FACET_LIMIT), String.valueOf(facet.limit()));
-                            }
+                            solrQuery.setParam(FacetParams.FACET_FIELD, facet.key());  
                         }
                         
                         
