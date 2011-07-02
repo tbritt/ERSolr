@@ -19,7 +19,7 @@ public class SolrFacet {
     private Integer _minCount;
     private Integer _limit;
     private NSMutableDictionary<String, EOQualifier> _qualifiers;
-    private NSMutableSet<Object> _selectedItems;
+    private NSMutableSet<FacetItem> _selectedItems;
     
     public static interface Delegate {
         public void facetDidChange();
@@ -55,7 +55,7 @@ public class SolrFacet {
     }
     
     private SolrFacet() {
-        _selectedItems = new NSMutableSet<Object>();
+        _selectedItems = new NSMutableSet<FacetItem>();
         _qualifiers = new NSMutableDictionary<String, EOQualifier>();
     }
     
@@ -66,6 +66,7 @@ public class SolrFacet {
     public static SolrFacet newSolrFacet(String key, Delegate delegate) {
         SolrFacet solrFacet = new SolrFacet();
         solrFacet._delegate = delegate;
+        solrFacet._key = key;
         return solrFacet;
     }
 
@@ -95,20 +96,21 @@ public class SolrFacet {
     /**
      * @return the selectedItems
      */
-    public NSArray<Object> selectedItems() {
+    public NSArray<FacetItem> selectedItems() {
         return _selectedItems.allObjects();
     }
 
-    public void selectItem(Object item) {
+    public void selectItem(FacetItem item) {
         if (item != null) {
             _selectedItems.addObject(item);
             facetDidChange();
         }
     }
 
-    public void deselectItem(Object item) {
+    public void deselectItem(FacetItem item) {
         if (item != null) {
-            _selectedItems.removeObject(item);
+            FacetItem itemToRemove = selectedFacetItemForKey(item.key());
+            _selectedItems.removeObject(itemToRemove);
             facetDidChange();
         }
     }
@@ -195,5 +197,48 @@ public class SolrFacet {
         return _delegate;
     }
     
+    public void setDelegate(Delegate delegate) {
+        _delegate = delegate;
+    }
     
+    public FacetItem selectedFacetItemForKey(String key) {
+        for (FacetItem facetItem : selectedItems()) {
+            if (facetItem.key().equals(key)) return facetItem;
+        }
+        return null;
+    }
+    
+    public boolean isFacetItemSelected(FacetItem facetItem) {
+        return selectedFacetItemForKey(facetItem.key()) != null;
+    }
+    
+    public static class FacetItem {
+        private Number _count;
+        private String _key;
+        private SolrFacet _facet;
+        
+        public static FacetItem newFacetItem(String key, Number count, SolrFacet facet) {
+            FacetItem facetItem = new FacetItem();
+            facetItem._key = key;
+            facetItem._count = count;
+            facetItem._facet = facet;
+            return facetItem;
+        }
+        
+        public Number count() {
+            return _count;
+        }
+
+        public String key() {
+            return _key;
+        }
+        
+        public EOQualifier qualifier() {
+            return _facet.qualifierForKey(_key);
+        }
+        
+        public SolrFacet facet() {
+            return _facet;
+        }
+    }
 }

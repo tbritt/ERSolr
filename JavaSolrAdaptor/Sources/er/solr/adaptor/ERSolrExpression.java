@@ -48,7 +48,11 @@ public class ERSolrExpression extends EOSQLExpression {
             for (Enumeration e = attributes.allKeys().objectEnumerator(); e.hasMoreElements();) {
                 String attributeKey = (String)e.nextElement();
                 String attributeValue = (String)attributes.valueForKey(attributeKey);
-                sb.append(attributeKey).append("=").append(attributeValue).append(" ");
+                sb.append(attributeKey).append("=");
+                escapeAndAppend(attributeValue, sb);
+                if (e.hasMoreElements()) {
+                    sb.append(" ");
+                }
             }
             sb.append("}");
         }

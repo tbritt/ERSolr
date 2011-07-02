@@ -9,7 +9,6 @@ import org.apache.solr.client.solrj.impl.CommonsHttpSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.params.FacetParams;
-import org.apache.solr.common.params.SolrParams;
 
 import com.webobjects.eoaccess.EOAdaptorChannel;
 import com.webobjects.eoaccess.EOAdaptorContext;
@@ -32,7 +31,7 @@ import er.extensions.foundation.ERXMutableURL;
 import er.extensions.foundation.ERXStringUtilities;
 import er.solr.ERXSolrFetchSpecification;
 import er.solr.SolrFacet;
-import er.solr.SolrFacet.Operator;
+import er.solr.SolrFacet.FacetItem;
 
 
 public class ERSolrAdaptorChannel extends EOAdaptorChannel {
@@ -169,11 +168,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
         if (fetchSpecification instanceof ERXSolrFetchSpecification) {
             solrFetchSpecification = (ERXSolrFetchSpecification)fetchSpecification;
         }
-        else {
-            // TODO: Turn this back on?
-            //throw new IllegalArgumentException("Fetch specification must be of type " + ERXSolrFetchSpecification.class.getName());
-        }
-        
+
         setAttributesToFetch(attributesToFetch);
 
         try {
@@ -246,37 +241,44 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                         // for supporting multiple selection. The only case where it should not be excluded is when the 
                         // facet attribute is multi-value and the face operator is AND.
                         boolean isExcludingFromCounts = true;
-                        EOAttribute facetAttribute = entity.attributeNamed(facet.key());
-                        Object isMultiValue = facetAttribute.userInfo().valueForKey("isMultiValue");
-                        if (NSValueUtilities.booleanValueWithDefault(isMultiValue, false) && SolrFacet.Operator.AND.equals(facet.operator())) {
+                        boolean isMultiValue = false;
+                        EOAttribute attribute = entity.attributeNamed(facet.key());
+                        
+                        if (attribute == null) {
+                            throw new IllegalStateException("Can not find EOAttribute in entity " + entity.name() + " for facet key " + facet.key());
+                        }
+                        
+                        isMultiValue = NSValueUtilities.booleanValueWithDefault((attribute.userInfo() == null ? null : attribute.userInfo().valueForKey("isMultiValue")), false);
+                        if (isMultiValue && SolrFacet.Operator.AND.equals(facet.operator())) {
                             isExcludingFromCounts = false;
                         }
                         
-                        
-                        // Arbitrary query facets
+                        // Facet queries
                         if (facet.isQuery()) {
+                            String qualifierKeyPrefix = facet.key() + ".";
                             for (Enumeration qualifierKeyEnumeration = facet.qualifierKeys().objectEnumerator(); qualifierKeyEnumeration.hasMoreElements();) {
                                 String qualifierKey = (String)qualifierKeyEnumeration.nextElement();
+                                String prefixedQualifierKey = qualifierKeyPrefix + qualifierKey;
                                 NSMutableDictionary<String, String> parameters = new NSMutableDictionary<String, String>();
                                 
                                 // Set parameter on qualifier with its key so it can be pulled out of the results by the same key:
-                                // facet.query={!key=qualifierKey}some_query
-                                parameters.takeValueForKey(qualifierKey, ERSolrExpression.PARAMETER_KEY);
+                                // facet.query={!key=facetKey.qualifierKey}some_query
+                                parameters.takeValueForKey(prefixedQualifierKey, ERSolrExpression.PARAMETER_KEY);
                                 
                                 if (isExcludingFromCounts) {
-                                    parameters.takeValueForKey(qualifierKey, ERSolrExpression.PARAMETER_EXCLUSION);
+                                    parameters.takeValueForKey(prefixedQualifierKey, ERSolrExpression.PARAMETER_EXCLUSION);
                                 }
                                 
                                 StringBuilder sb = new StringBuilder();
                                 ERSolrExpression.appendLocalParams(sb, parameters);
                                 EOQualifier facetQualifier = facet.qualifierForKey(qualifierKey);
                                 sb.append(solrExpression.solrStringForQualifier(facetQualifier));
-                                solrQuery.setParam(FacetParams.FACET_QUERY, sb.toString());
+                                solrQuery.addFacetQuery(sb.toString());
                             }
                         }
                         
                         
-                        // Field value facets
+                        // Facet fields
                         else {
                             StringBuilder sb = new StringBuilder();
                             if (isExcludingFromCounts) {
@@ -297,7 +299,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                             
                             filterQuery.append("(");
                             for (Enumeration facetItemEnumeration = facet.selectedItems().objectEnumerator(); facetItemEnumeration.hasMoreElements();) {
-                                Object selectedFacetItem = facetItemEnumeration.nextElement();
+                                FacetItem selectedFacetItem = (FacetItem)facetItemEnumeration.nextElement();
                                 String operator = null; 
                                 if (SolrFacet.Operator.NOT.equals(facet.operator())) {
                                     filterQuery.append(SolrFacet.Operator.NOT.toString()).append(" ");
@@ -307,8 +309,13 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                                     operator = facet.operator().toString();
                                 }
                                 
-                                filterQuery.append(facet.key()).append(":");
-                                ERSolrExpression.escapeAndAppend(selectedFacetItem, filterQuery);
+                                if (selectedFacetItem.qualifier() != null) {
+                                    filterQuery.append(solrExpression.solrStringForQualifier(selectedFacetItem.qualifier()));
+                                }
+                                else {
+                                    filterQuery.append(facet.key()).append(":");
+                                    ERSolrExpression.escapeAndAppend(selectedFacetItem.key(), filterQuery);
+                                }
                                 
                                 if (facetItemEnumeration.hasMoreElements()) {
                                     filterQuery.append(" ").append(operator).append(" ");
@@ -328,16 +335,16 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             CommonsHttpSolrServer solrServer = new CommonsHttpSolrServer(url.toURL());
             QueryResponse queryResponse = solrServer.query(solrQuery);
             
+            //TODO: Handle error reponses from Solr
+            
             if (log.isDebugEnabled()) {
                 log.debug("Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
                 log.debug("Solr response time: " + queryResponse.getElapsedTime() + "ms");
             }
             
             if (solrFetchSpecification != null) {
-                ERXSolrFetchSpecification.Result result = ERXSolrFetchSpecification.Result.newResult(queryResponse);
+                ERXSolrFetchSpecification.Result result = ERXSolrFetchSpecification.Result.newResult(queryResponse,solrFetchSpecification);
                 solrFetchSpecification.setResult(result);
-                //TODO: facets
-                
             }
             
             for (SolrDocument solrDoc : queryResponse.getResults()) {
@@ -350,7 +357,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                             value = NSKeyValueCoding.NullValue;
                         }
                         
-                        // TODO: Create a real value for multivalue fields, can be list of 1 or n.
+                        // TODO: Create a real value for multi-value fields, can be list of 1 or n.
                         if (value instanceof List) {
                             value = value.toString();
                         }

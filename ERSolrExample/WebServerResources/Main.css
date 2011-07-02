@@ -24,6 +24,43 @@ div.content {
     margin: 20px;
 }
 
+div#facets {
+    float: left; 
+    #background: #eee;
+    margin-right: 20px;
+    padding: 10px;
+    padding-right: 15px;
+    border-right: 1px solid #ddd;
+    
+}
+
+div#facets ul.facetList, div#facets ul.facetItemList {
+    list-style: none;
+    margin:0;
+    padding:0;
+}
+
+div#facets ul.facetList li {
+    margin:0;
+    padding:0;
+    padding-bottom: .5em;
+}
+
+div#facets ul.facetItemList li {
+    margin:0;
+    padding:0;
+    padding-bottom: .5em;
+}
+
+div#facets ul.facetItemList {
+    margin-left: 1em;
+}
+
+div#facets ul.facetList li h3 {
+    font-size: 9pt;
+    
+}
+
 table {
     border-collapse: collapse;
 }

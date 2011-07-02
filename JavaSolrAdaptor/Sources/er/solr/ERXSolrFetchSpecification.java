@@ -1,5 +1,9 @@
 package er.solr;
 
+import java.util.Map;
+
+import org.apache.solr.client.solrj.response.FacetField;
+import org.apache.solr.client.solrj.response.FacetField.Count;
 import org.apache.solr.client.solrj.response.QueryResponse;
 
 import com.webobjects.eocontrol.EOEditingContext;
@@ -9,11 +13,13 @@ import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSMutableArray;
+import com.webobjects.foundation.NSMutableDictionary;
 
 import er.extensions.eof.ERXEC;
 import er.extensions.eof.ERXFetchSpecification;
 import er.extensions.eof.ERXKey;
 import er.extensions.foundation.ERXStringUtilities;
+import er.solr.SolrFacet.FacetItem;
 
 
 public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERXFetchSpecification implements SolrFacet.Delegate {
@@ -103,8 +109,16 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
      * @param facet the facet to add. Will result in a new fetch.
      */
     public void addFacet(SolrFacet facet) {
+        facet.setDelegate(this);
         _facets.addObject(facet);
         queryDidChange(true);
+    }
+    
+    public SolrFacet facetForKey(String key) {
+        for (SolrFacet facet: facets()) {
+            if (facet.key().equals(key)) return facet;
+        }
+        return null;
     }
     
     /**
@@ -261,14 +275,16 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
     public static class Result<T> {
         private NSArray<T> _objects;
         private QueryResponse _queryResponse;
-        private NSDictionary<ERXKey, NSDictionary<String, Object>> statistics;
-        private NSDictionary<ERXKey, NSDictionary<String, Object>> facetResults;
+        private ERXSolrFetchSpecification _solrFetchSpecification;
+        private NSMutableDictionary<String, NSArray<FacetItem>> _facetResults;
         
         private Result(){};
         
-        public static Result newResult(QueryResponse queryResponse) {
+        public static Result newResult(QueryResponse queryResponse, ERXSolrFetchSpecification solrFetchSpecification) {
             Result result = new Result();
             result._queryResponse = queryResponse;
+            result._solrFetchSpecification = solrFetchSpecification;
+            result._processResponse();
             return result;
         }
 
@@ -284,6 +300,40 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
             return _objects;
         }
         
+        public NSArray<FacetItem> itemCounts(String facetKey) {
+            return _facetResults.objectForKey(facetKey);
+        }
+        
+        private void _processResponse() {
+            _facetResults = new NSMutableDictionary<String, NSArray<FacetItem>>();
+            
+            // Facet fields
+            for (FacetField facetField : _queryResponse.getFacetFields()) {
+                NSMutableArray<FacetItem> facetItems = new NSMutableArray<FacetItem>();
+                for (Count count : facetField.getValues()) {
+                    FacetItem facetItem = FacetItem.newFacetItem(count.getName(), count.getCount(), _solrFetchSpecification.facetForKey(facetField.getName()));
+                    facetItems.addObject(facetItem);
+                }
+                _facetResults.takeValueForKey(facetItems, facetField.getName());
+            }
+            
+            // Facet queries
+            Map<String, Integer> facetQueries = _queryResponse.getFacetQuery();
+            if (facetQueries.size() > 0) {
+                for (String key : facetQueries.keySet()) {
+                    String queryPrefix = ERXStringUtilities.firstPropertyKeyInKeyPath(key);
+                    String originalKey = key.substring(queryPrefix.length() + 1);
+                    FacetItem facetItem = FacetItem.newFacetItem(originalKey, facetQueries.get(key), _solrFetchSpecification.facetForKey(queryPrefix));
+                    if (_facetResults.containsKey(queryPrefix)) {
+                        ((NSMutableArray)_facetResults.objectForKey(queryPrefix)).add(facetItem);
+                    }
+                    else {
+                        _facetResults.takeValueForKey(new NSMutableArray<FacetItem>(facetItem), queryPrefix);
+                    }
+                }
+            }
+            
+        }
     }
     
 }
