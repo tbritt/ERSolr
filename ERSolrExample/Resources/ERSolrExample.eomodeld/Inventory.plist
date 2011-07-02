@@ -5,7 +5,7 @@
             columnName = features; 
             name = features; 
             prototypeName = varcharLarge; 
-            userInfo = {"" = false; isMultiValue = true; }; 
+            userInfo = {isMultiValue = true; }; 
         }, 
         {
             allowsNull = N; 
