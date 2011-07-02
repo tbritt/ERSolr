@@ -1,13 +1,18 @@
 {
     attributes = (
         {columnName = cat; name = category; prototypeName = varcharLarge; }, 
-        {columnName = features; name = features; prototypeName = varcharLarge; }, 
+        {
+            columnName = features; 
+            name = features; 
+            prototypeName = varcharLarge; 
+            userInfo = {"" = false; isMultiValue = true; }; 
+        }, 
         {
             allowsNull = N; 
             externalType = string; 
             name = id; 
             prototypeName = id; 
-            userInfo = {indexed = true; multiValued = false; stored = true; }; 
+            userInfo = {indexed = true; isMultiValue = false; stored = true; }; 
             valueClassName = NSString; 
         }, 
         {columnName = inStock; name = inStock; prototypeName = boolean; }, 
