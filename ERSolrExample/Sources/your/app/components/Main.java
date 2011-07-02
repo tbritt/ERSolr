@@ -57,7 +57,7 @@ public class Main extends BaseComponent {
 	}
 	
 	public NSArray<FacetItem> facetItems() {
-	    return fetchSpecification().result().itemCounts(_facet.key());
+	    return fetchSpecification().result().facetItems(_facet.key());
 	}
 	
 	public boolean isFacetItemSelected() {
@@ -89,9 +89,9 @@ public class Main extends BaseComponent {
 	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.greaterThan(Float.valueOf(50)), "Over 50 lbs");
             _fetchSpecification.addFacet(weightQueryFacet);
 	        
+            _fetchSpecification.addFacet(SolrFacet.newSolrFacet(Inventory.IN_STOCK_KEY));
+            
 	        _fetchSpecification.addFacet(SolrFacet.newSolrFacet(Inventory.POPULARITY_KEY));
-	        
-	        _fetchSpecification.addFacet(SolrFacet.newSolrFacet(Inventory.IN_STOCK_KEY));
 	    }
 	    return _fetchSpecification;
 	}

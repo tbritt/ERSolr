@@ -300,7 +300,7 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
             return _objects;
         }
         
-        public NSArray<FacetItem> itemCounts(String facetKey) {
+        public NSArray<FacetItem> facetItems(String facetKey) {
             return _facetResults.objectForKey(facetKey);
         }
         
