@@ -266,7 +266,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                                 parameters.takeValueForKey(prefixedQualifierKey, ERSolrExpression.PARAMETER_KEY);
                                 
                                 if (isExcludingFromCounts) {
-                                    parameters.takeValueForKey(prefixedQualifierKey, ERSolrExpression.PARAMETER_EXCLUSION);
+                                    parameters.takeValueForKey(facet.key(), ERSolrExpression.PARAMETER_EXCLUSION);
                                 }
                                 
                                 StringBuilder sb = new StringBuilder();
