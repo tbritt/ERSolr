@@ -26,7 +26,6 @@ import er.solr.SolrFacet.FacetItem;
 
 public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERXFetchSpecification implements SolrFacet.Delegate {
 
-    private NSArray<EOSortOrdering> _sortOrderings;
     private NSArray<ERXKey<T>> _statisticsAttributes;
     private NSMutableArray<SolrFacet> _facets;
     private EOQualifier _qualifier;
@@ -70,18 +69,13 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
         }
     }
 
-    /**
-     * @return the sortOrderings
-     */
-    public NSArray<EOSortOrdering> sortOrderings() {
-        return _sortOrderings;
-    }
 
     /**
-     * @param sortOrderings the sortOrderings to set. Will result in new fetch.
+     * Overridden to trigger new fetch.
      */
+    @Override
     public void setSortOrderings(NSArray<EOSortOrdering> sortOrderings) {
-        _sortOrderings = sortOrderings;
+        super.setSortOrderings(sortOrderings);
         queryDidChange(true);
     }
 

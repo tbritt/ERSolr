@@ -20,11 +20,13 @@ import com.webobjects.eoaccess.EOSQLExpression;
 import com.webobjects.eoaccess.EOStoredProcedure;
 import com.webobjects.eocontrol.EOFetchSpecification;
 import com.webobjects.eocontrol.EOQualifier;
+import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
 import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSKeyValueCoding;
 import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
+import com.webobjects.foundation.NSSelector;
 import com.webobjects.foundation.NSValueUtilities;
 
 import er.extensions.foundation.ERXMutableURL;
@@ -196,6 +198,9 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             solrQuery.setQuery(solrQueryString);
             solrQuery.setRows(Integer.MAX_VALUE);
             
+            // Sorting
+            _applySortOrderings(solrQuery, fetchSpecification.sortOrderings());
+            
             if (solrFetchSpecification != null) {
                 if (solrFetchSpecification.maxTime() != null) {
                     solrQuery.setTimeAllowed(solrFetchSpecification.maxTime());
@@ -335,7 +340,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             CommonsHttpSolrServer solrServer = new CommonsHttpSolrServer(url.toURL());
             QueryResponse queryResponse = solrServer.query(solrQuery);
             
-            //TODO: Handle error reponses from Solr
+            //TODO: Handle error responses from Solr
             
             if (log.isDebugEnabled()) {
                 log.debug("Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
@@ -380,5 +385,21 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
         }
     }
     
-    
+    protected void _applySortOrderings(SolrQuery solrQuery, NSArray<EOSortOrdering> sortOrderings) {
+        for (Enumeration sortOrderingEnum = sortOrderings.objectEnumerator(); sortOrderingEnum.hasMoreElements(); ) {
+            EOSortOrdering sortOrdering = (EOSortOrdering)sortOrderingEnum.nextElement();
+            SolrQuery.ORDER order;
+            NSSelector sortSelector = sortOrdering.selector();
+            if (sortSelector == EOSortOrdering.CompareAscending || sortSelector == EOSortOrdering.CompareCaseInsensitiveAscending) {
+                order = SolrQuery.ORDER.asc;
+            }
+            else if (sortSelector == EOSortOrdering.CompareDescending || sortSelector == EOSortOrdering.CompareCaseInsensitiveDescending) {
+                order = SolrQuery.ORDER.desc;
+            }
+            else {
+                throw new IllegalArgumentException("Unknown sort ordering selector: " + sortSelector);
+            }
+            solrQuery.addSortField(sortOrdering.key(), order);
+        }
+    }
 }

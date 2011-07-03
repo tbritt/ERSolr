@@ -79,6 +79,8 @@ public class Main extends BaseComponent {
 	        _fetchSpecification = new ERXSolrFetchSpecification<Inventory>(Inventory.ENTITY_NAME);
 	        _fetchSpecification.setBatchSize(Integer.valueOf(5));
 	        
+	        _fetchSpecification.setSortOrderings(Inventory.PRICE.descs());
+	        
 	        // Facets
 	        SolrFacet priceQueryFacet = SolrFacet.newSolrFacet(Inventory.PRICE_KEY);
 	        priceQueryFacet.addQualifierForKey(Inventory.PRICE.lessThanOrEqualTo(Float.valueOf(100)), "Low Price");
