@@ -1,24 +1,21 @@
 package er.solr;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Map;
 
 import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.FacetField.Count;
 import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.common.params.FacetParams;
 
 import com.webobjects.eocontrol.EOEditingContext;
 import com.webobjects.eocontrol.EOEnterpriseObject;
 import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
-import com.webobjects.foundation.NSComparator;
-import com.webobjects.foundation.NSComparator.ComparisonException;
-import com.webobjects.foundation.NSDictionary;
 import com.webobjects.foundation.NSForwardException;
 import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
-import com.webobjects.foundation.NSSelector;
 
 import er.extensions.eof.ERXEC;
 import er.extensions.eof.ERXFetchSpecification;
@@ -317,7 +314,29 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
                 NSMutableArray<FacetItem> facetItems = new NSMutableArray<FacetItem>();
                 SolrFacet facet = _solrFetchSpecification.facetForKey(facetField.getName());
                 for (Count count : facetField.getValues()) {
-                    FacetItem facetItem = FacetItem.newFacetItem(count.getName(), count.getCount(), facet);
+                    String name = count.getName();
+                    Object key = name;
+                    
+                    // FIXME: Jebus this is frakking horrible. I feel sick just writing it. Fix after prototypes are finished.
+                    if (ERXStringUtilities.isDigitsOnly(name)) {
+                        try {
+                            key = NumberFormat.getInstance().parseObject(name);
+                        }
+                        catch (ParseException e) {
+                            throw new NSForwardException(e);
+                        }
+                    }
+                    
+                    /*
+                    String entityName = _solrFetchSpecification.entityName();
+                    EOEntity entity = ERXEOAccessUtilities.entityNamed(null, entityName);
+                    EOAttribute attribute = entity.attributeNamed(facet.key());
+                    if (attribute != null) {
+                        key = attribute.prototype().adaptorValueByConvertingAttributeValue(count.getName());
+                    }
+                    */
+                    
+                    FacetItem facetItem = FacetItem.newFacetItem(key, count.getCount(), facet);
                     facetItems.addObject(facetItem);
                 }
                 

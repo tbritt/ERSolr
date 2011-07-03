@@ -201,7 +201,7 @@ public class SolrFacet {
         _delegate = delegate;
     }
     
-    public FacetItem selectedFacetItemForKey(String key) {
+    public FacetItem selectedFacetItemForKey(Object key) {
         for (FacetItem facetItem : selectedItems()) {
             if (facetItem.key().equals(key)) return facetItem;
         }
@@ -214,10 +214,10 @@ public class SolrFacet {
     
     public static class FacetItem {
         private Number _count;
-        private String _key;
+        private Object _key;
         private SolrFacet _facet;
         
-        public static FacetItem newFacetItem(String key, Number count, SolrFacet facet) {
+        public static FacetItem newFacetItem(Object key, Number count, SolrFacet facet) {
             FacetItem facetItem = new FacetItem();
             facetItem._key = key;
             facetItem._count = count;
@@ -229,12 +229,12 @@ public class SolrFacet {
             return _count;
         }
 
-        public String key() {
+        public Object key() {
             return _key;
         }
         
         public EOQualifier qualifier() {
-            return _facet.qualifierForKey(_key);
+            return _facet.qualifierForKey(String.valueOf(_key));
         }
         
         public SolrFacet facet() {
