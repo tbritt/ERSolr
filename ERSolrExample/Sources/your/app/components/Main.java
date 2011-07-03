@@ -11,6 +11,7 @@ import er.extensions.foundation.ERXStringUtilities;
 import er.solr.ERXSolrFetchSpecification;
 import er.solr.SolrFacet;
 import er.solr.SolrFacet.FacetItem;
+import er.solr.SolrFacet.Sort;
 import er.solr.example.eo.Inventory;
 
 public class Main extends BaseComponent {
@@ -89,9 +90,13 @@ public class Main extends BaseComponent {
 	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.greaterThan(Float.valueOf(50)), "Over 50 lbs");
             _fetchSpecification.addFacet(weightQueryFacet);
 	        
-            _fetchSpecification.addFacet(SolrFacet.newSolrFacet(Inventory.IN_STOCK_KEY));
+            SolrFacet stockFacet = SolrFacet.newSolrFacet(Inventory.IN_STOCK_KEY);
+            stockFacet.setSort(Sort.Boolean);
+            _fetchSpecification.addFacet(stockFacet);
             
-	        _fetchSpecification.addFacet(SolrFacet.newSolrFacet(Inventory.POPULARITY_KEY));
+            SolrFacet popularityFacet = SolrFacet.newSolrFacet(Inventory.POPULARITY_KEY);
+            popularityFacet.setSort(Sort.Numeric);
+            _fetchSpecification.addFacet(popularityFacet);
 	    }
 	    return _fetchSpecification;
 	}

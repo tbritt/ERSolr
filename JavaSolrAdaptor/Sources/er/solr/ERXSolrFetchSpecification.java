@@ -5,15 +5,20 @@ import java.util.Map;
 import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.FacetField.Count;
 import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.common.params.FacetParams;
 
 import com.webobjects.eocontrol.EOEditingContext;
 import com.webobjects.eocontrol.EOEnterpriseObject;
 import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
+import com.webobjects.foundation.NSComparator;
+import com.webobjects.foundation.NSComparator.ComparisonException;
 import com.webobjects.foundation.NSDictionary;
+import com.webobjects.foundation.NSForwardException;
 import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
+import com.webobjects.foundation.NSSelector;
 
 import er.extensions.eof.ERXEC;
 import er.extensions.eof.ERXFetchSpecification;
@@ -310,10 +315,28 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
             // Facet fields
             for (FacetField facetField : _queryResponse.getFacetFields()) {
                 NSMutableArray<FacetItem> facetItems = new NSMutableArray<FacetItem>();
+                SolrFacet facet = _solrFetchSpecification.facetForKey(facetField.getName());
                 for (Count count : facetField.getValues()) {
-                    FacetItem facetItem = FacetItem.newFacetItem(count.getName(), count.getCount(), _solrFetchSpecification.facetForKey(facetField.getName()));
+                    FacetItem facetItem = FacetItem.newFacetItem(count.getName(), count.getCount(), facet);
                     facetItems.addObject(facetItem);
                 }
+                
+                // Can't fully rely on Solr sorting facet items, b/c it sucks. So do our own sorting here.
+                EOSortOrdering sortOrdering = null;
+                if (SolrFacet.Sort.Alpha.equals(facet.sort())) {
+                    sortOrdering = EOSortOrdering.sortOrderingWithKey("key", EOSortOrdering.CompareCaseInsensitiveAscending);
+                }
+                else if (SolrFacet.Sort.Boolean.equals(facet.sort())) {
+                    sortOrdering = EOSortOrdering.sortOrderingWithKey("key", EOSortOrdering.CompareCaseInsensitiveDescending);
+                }
+                else if (SolrFacet.Sort.Numeric.equals(facet.sort())) {
+                    sortOrdering = EOSortOrdering.sortOrderingWithKey("key", EOSortOrdering.CompareAscending);
+                }
+                
+                if (sortOrdering != null) {
+                    EOSortOrdering.sortArrayUsingKeyOrderArray(facetItems, new NSArray<EOSortOrdering>(sortOrdering));
+                }
+
                 _facetResults.takeValueForKey(facetItems, facetField.getName());
             }
             
