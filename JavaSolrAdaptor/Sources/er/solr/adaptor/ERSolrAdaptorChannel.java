@@ -333,16 +333,13 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                 }
             }
             
-            //TODO: remove
-            System.out.println(" Original qualifier: " + qualifier);
-            System.out.println("         Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
-            
             CommonsHttpSolrServer solrServer = new CommonsHttpSolrServer(url.toURL());
             QueryResponse queryResponse = solrServer.query(solrQuery);
             
             //TODO: Handle error responses from Solr
             
             if (log.isDebugEnabled()) {
+                log.debug("Original qualifier: " + qualifier);
                 log.debug("Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
                 log.debug("Solr response time: " + queryResponse.getElapsedTime() + "ms");
             }
@@ -370,10 +367,12 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                     }
                 }
                 
-                // TODO: Take this out unless I'm planning to support qualifiers that can't be translated to Solr query.
-                // if (qualifier == null || qualifier.evaluateWithObject(row)) {
-                _fetchedRows.addObject(row);
-                // }
+                if (qualifier != null && !qualifier.evaluateWithObject(row)) {
+                    log.warn("EOQualifier is more restrictive than Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
+                }
+                else {
+                    _fetchedRows.addObject(row);
+                }
             }
         }
         catch (EOGeneralAdaptorException e) {
