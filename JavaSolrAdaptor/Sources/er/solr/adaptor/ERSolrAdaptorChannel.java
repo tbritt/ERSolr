@@ -349,6 +349,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                 solrFetchSpecification.setResult(result);
             }
             
+            boolean isQualifierMoreRestrictiveThanSolrQuery = false;
             for (SolrDocument solrDoc : queryResponse.getResults()) {
                 NSMutableDictionary<String, Object> row = new NSMutableDictionary<String, Object>();
                 for (EOAttribute attribute : attributesToFetch) {
@@ -368,11 +369,15 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                 }
                 
                 if (qualifier != null && !qualifier.evaluateWithObject(row)) {
-                    log.warn("EOQualifier is more restrictive than Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
+                    isQualifierMoreRestrictiveThanSolrQuery = true;
                 }
                 else {
                     _fetchedRows.addObject(row);
                 }
+            }
+            
+            if (isQualifierMoreRestrictiveThanSolrQuery) {
+                log.warn("EOQualifier is more restrictive than generated Solr query: " + ERXStringUtilities.urlDecode(solrQuery.toString()));
             }
         }
         catch (EOGeneralAdaptorException e) {
