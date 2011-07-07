@@ -368,7 +368,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                     }
                 }
                 
-                if (qualifier != null && !qualifier.evaluateWithObject(row)) {
+                if (qualifier != null && !qualifier.evaluateWithObject(row)) {  // Performance impact?
                     isQualifierMoreRestrictiveThanSolrQuery = true;
                 }
                 else {
