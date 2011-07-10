@@ -10,7 +10,7 @@
                 Default = {
                     adaptorName = Solr; 
                     connectionDictionary = {URL = "http://127.0.0.1:8983/solr/"; }; 
-                    prototypeEntityName = EOMemoryPrototypes; 
+                    prototypeEntityName = EOSolrPrototypes; 
                 }; 
             }; 
         }; 

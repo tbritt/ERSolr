@@ -1,7 +1,11 @@
 package er.solr.adaptor;
 
+import java.math.BigInteger;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -10,6 +14,7 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.params.FacetParams;
 
+import com.ibm.icu.math.BigDecimal;
 import com.webobjects.eoaccess.EOAdaptorChannel;
 import com.webobjects.eoaccess.EOAdaptorContext;
 import com.webobjects.eoaccess.EOAttribute;
@@ -22,13 +27,17 @@ import com.webobjects.eocontrol.EOFetchSpecification;
 import com.webobjects.eocontrol.EOQualifier;
 import com.webobjects.eocontrol.EOSortOrdering;
 import com.webobjects.foundation.NSArray;
+import com.webobjects.foundation.NSData;
 import com.webobjects.foundation.NSDictionary;
+import com.webobjects.foundation.NSForwardException;
 import com.webobjects.foundation.NSKeyValueCoding;
 import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
+import com.webobjects.foundation.NSPropertyListSerialization;
 import com.webobjects.foundation.NSSelector;
-import com.webobjects.foundation.NSValueUtilities;
+import com.webobjects.foundation.NSTimestamp;
 
+import er.extensions.foundation.ERXKeyValueCodingUtilities;
 import er.extensions.foundation.ERXMutableURL;
 import er.extensions.foundation.ERXStringUtilities;
 import er.solr.ERXSolrFetchSpecification;
@@ -246,14 +255,13 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                         // for supporting multiple selection. The only case where it should not be excluded is when the 
                         // facet attribute is multi-value and the face operator is AND.
                         boolean isExcludingFromCounts = true;
-                        boolean isMultiValue = false;
                         EOAttribute attribute = entity.attributeNamed(facet.key());
                         
                         if (attribute == null) {
                             throw new IllegalStateException("Can not find EOAttribute in entity " + entity.name() + " for facet key " + facet.key());
                         }
                         
-                        isMultiValue = NSValueUtilities.booleanValueWithDefault((attribute.userInfo() == null ? null : attribute.userInfo().valueForKey("isMultiValue")), false);
+                        boolean isMultiValue = attribute.valueTypeClassName().endsWith("NSArray");
                         if (isMultiValue && SolrFacet.Operator.AND.equals(facet.operator())) {
                             isExcludingFromCounts = false;
                         }
@@ -346,7 +354,7 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             
             if (solrFetchSpecification != null) {
                 ERXSolrFetchSpecification.Result result = ERXSolrFetchSpecification.Result.newResult(queryResponse,solrFetchSpecification);
-                solrFetchSpecification.setResult(result);
+                solrFetchSpecification.setResult(result); //FIXME
             }
             
             boolean isQualifierMoreRestrictiveThanSolrQuery = false;
@@ -359,11 +367,13 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
                         if (value == null) {
                             value = NSKeyValueCoding.NullValue;
                         }
-                        
-                        // TODO: Create a real value for multi-value fields, can be list of 1 or n.
-                        if (value instanceof List) {
-                            value = value.toString();
+                        else if (value instanceof List) {
+                            value = new NSArray((List)value);
                         }
+                        else if (value instanceof Map) {
+                            value = new NSDictionary((Map)value);
+                        }
+                        
                         row.takeValueForKey(value, attribute.name());
                     }
                 }
@@ -387,6 +397,44 @@ public class ERSolrAdaptorChannel extends EOAdaptorChannel {
             e.printStackTrace();
             throw new EOGeneralAdaptorException("Failed to fetch '" + entity.name() + "' with fetch specification '" + fetchSpecification + "': " + e.getMessage());
         }
+    }
+    
+    public static Object convertValue(String value, EOAttribute attribute) {
+        if (attribute != null) {
+            try {
+                if (attribute.valueType() != null) {
+                    char valueType = attribute.valueType().charAt(0);
+                    switch (valueType) {
+                        case 'i':
+                            return Integer.valueOf(value);
+                        case 'b':
+                            return BigInteger.valueOf(Long.valueOf(value));
+                        case 'l':
+                            return Long.valueOf(value);
+                        case 'd':
+                            return Double.valueOf(value);
+                        case 'B':
+                            return BigDecimal.valueOf(Double.valueOf(value));
+                    }
+                }
+                if (attribute.className().contains("NSTimestamp")) {
+                    return new NSTimestamp(SimpleDateFormat.getDateInstance().parse(value));
+                } 
+                else if (attribute.className().contains("NSData")) {
+                    return new NSData((NSData) NSPropertyListSerialization.propertyListFromString(value));
+                } 
+                else if (attribute.className().contains("NSArray")) {
+                    return NSArray.componentsSeparatedByString(value, " ");
+                }
+                else if (attribute.className().contains("Boolean")) {
+                    return Boolean.valueOf(value);
+                }
+            }
+            catch (ParseException e) {
+                throw NSForwardException._runtimeExceptionForThrowable(e);
+            }
+        }
+        return value;
     }
     
     protected void _applySortOrderings(SolrQuery solrQuery, NSArray<EOSortOrdering> sortOrderings) {

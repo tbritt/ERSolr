@@ -8,6 +8,8 @@ import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.FacetField.Count;
 import org.apache.solr.client.solrj.response.QueryResponse;
 
+import com.webobjects.eoaccess.EOAttribute;
+import com.webobjects.eoaccess.EOEntity;
 import com.webobjects.eocontrol.EOEditingContext;
 import com.webobjects.eocontrol.EOEnterpriseObject;
 import com.webobjects.eocontrol.EOQualifier;
@@ -18,10 +20,14 @@ import com.webobjects.foundation.NSMutableArray;
 import com.webobjects.foundation.NSMutableDictionary;
 
 import er.extensions.eof.ERXEC;
+import er.extensions.eof.ERXEOAccessUtilities;
+import er.extensions.eof.ERXEOControlUtilities;
 import er.extensions.eof.ERXFetchSpecification;
 import er.extensions.eof.ERXKey;
+import er.extensions.foundation.ERXKeyValueCodingUtilities;
 import er.extensions.foundation.ERXStringUtilities;
 import er.solr.SolrFacet.FacetItem;
+import er.solr.adaptor.ERSolrAdaptorChannel;
 
 
 public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERXFetchSpecification implements SolrFacet.Delegate {
@@ -308,33 +314,16 @@ public class ERXSolrFetchSpecification<T extends EOEnterpriseObject> extends ERX
                 NSMutableArray<FacetItem> facetItems = new NSMutableArray<FacetItem>();
                 SolrFacet facet = _solrFetchSpecification.facetForKey(facetField.getName());
                 for (Count count : facetField.getValues()) {
-                    String name = count.getName();
-                    Object key = name;
                     
-                    // FIXME: Jebus this is frakking horrible. I feel sick just writing it. Fix after prototypes are finished.
-                    if (ERXStringUtilities.isDigitsOnly(name)) {
-                        try {
-                            key = NumberFormat.getInstance().parseObject(name);
-                        }
-                        catch (ParseException e) {
-                            throw new NSForwardException(e);
-                        }
-                    }
-                    
-                    /*
-                    String entityName = _solrFetchSpecification.entityName();
-                    EOEntity entity = ERXEOAccessUtilities.entityNamed(null, entityName);
+                    // Solr's API returns these things as simple strings, so need to convert to the correct value type.
+                    EOEntity entity = ERXEOAccessUtilities.entityNamed(null, _solrFetchSpecification.entityName());
                     EOAttribute attribute = entity.attributeNamed(facet.key());
-                    if (attribute != null) {
-                        key = attribute.prototype().adaptorValueByConvertingAttributeValue(count.getName());
-                    }
-                    */
-                    
+                    Object key = ERSolrAdaptorChannel.convertValue(count.getName(), attribute);
                     FacetItem facetItem = FacetItem.newFacetItem(key, count.getCount(), facet);
                     facetItems.addObject(facetItem);
                 }
                 
-                // Can't fully rely on Solr sorting facet items, b/c it sucks. So do our own sorting here.
+                // Can't fully rely on Solr sorting facet items (currently only deals with count and alpha.) So do our own sorting here.
                 EOSortOrdering sortOrdering = null;
                 if (SolrFacet.Sort.Alpha.equals(facet.sort())) {
                     sortOrdering = EOSortOrdering.sortOrderingWithKey("key", EOSortOrdering.CompareCaseInsensitiveAscending);

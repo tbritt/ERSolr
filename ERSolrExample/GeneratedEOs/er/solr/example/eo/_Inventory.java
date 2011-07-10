@@ -20,14 +20,14 @@ public abstract class _Inventory extends er.extensions.eof.ERXGenericRecord {
 
   // Attribute Keys
   public static final ERXKey<String> CATEGORY = new ERXKey<String>("category");
-  public static final ERXKey<String> FEATURES = new ERXKey<String>("features");
+  public static final ERXKey<com.webobjects.foundation.NSArray> FEATURES = new ERXKey<com.webobjects.foundation.NSArray>("features");
   public static final ERXKey<Boolean> IN_STOCK = new ERXKey<Boolean>("inStock");
   public static final ERXKey<String> MANUFACTURER = new ERXKey<String>("manufacturer");
   public static final ERXKey<String> NAME = new ERXKey<String>("name");
   public static final ERXKey<Integer> POPULARITY = new ERXKey<Integer>("popularity");
-  public static final ERXKey<Float> PRICE = new ERXKey<Float>("price");
+  public static final ERXKey<Double> PRICE = new ERXKey<Double>("price");
   public static final ERXKey<String> SKU = new ERXKey<String>("sku");
-  public static final ERXKey<Float> WEIGHT = new ERXKey<Float>("weight");
+  public static final ERXKey<Double> WEIGHT = new ERXKey<Double>("weight");
   // Relationship Keys
 
   // Attributes
@@ -63,11 +63,11 @@ public abstract class _Inventory extends er.extensions.eof.ERXGenericRecord {
     takeStoredValueForKey(value, _Inventory.CATEGORY_KEY);
   }
 
-  public String features() {
-    return (String) storedValueForKey(_Inventory.FEATURES_KEY);
+  public com.webobjects.foundation.NSArray features() {
+    return (com.webobjects.foundation.NSArray) storedValueForKey(_Inventory.FEATURES_KEY);
   }
 
-  public void setFeatures(String value) {
+  public void setFeatures(com.webobjects.foundation.NSArray value) {
     if (_Inventory.LOG.isDebugEnabled()) {
     	_Inventory.LOG.debug( "updating features from " + features() + " to " + value);
     }
@@ -118,11 +118,11 @@ public abstract class _Inventory extends er.extensions.eof.ERXGenericRecord {
     takeStoredValueForKey(value, _Inventory.POPULARITY_KEY);
   }
 
-  public Float price() {
-    return (Float) storedValueForKey(_Inventory.PRICE_KEY);
+  public Double price() {
+    return (Double) storedValueForKey(_Inventory.PRICE_KEY);
   }
 
-  public void setPrice(Float value) {
+  public void setPrice(Double value) {
     if (_Inventory.LOG.isDebugEnabled()) {
     	_Inventory.LOG.debug( "updating price from " + price() + " to " + value);
     }
@@ -140,11 +140,11 @@ public abstract class _Inventory extends er.extensions.eof.ERXGenericRecord {
     takeStoredValueForKey(value, _Inventory.SKU_KEY);
   }
 
-  public Float weight() {
-    return (Float) storedValueForKey(_Inventory.WEIGHT_KEY);
+  public Double weight() {
+    return (Double) storedValueForKey(_Inventory.WEIGHT_KEY);
   }
 
-  public void setWeight(Float value) {
+  public void setWeight(Double value) {
     if (_Inventory.LOG.isDebugEnabled()) {
     	_Inventory.LOG.debug( "updating weight from " + weight() + " to " + value);
     }
@@ -153,14 +153,14 @@ public abstract class _Inventory extends er.extensions.eof.ERXGenericRecord {
 
 
   public static Inventory createInventory(EOEditingContext editingContext, String category
-, String features
+, com.webobjects.foundation.NSArray features
 , Boolean inStock
 , String manufacturer
 , String name
 , Integer popularity
-, Float price
+, Double price
 , String sku
-, Float weight
+, Double weight
 ) {
     Inventory eo = (Inventory) EOUtilities.createAndInsertInstance(editingContext, _Inventory.ENTITY_NAME);    
 		eo.setCategory(category);

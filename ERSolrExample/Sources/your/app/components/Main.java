@@ -20,6 +20,7 @@ public class Main extends BaseComponent {
     public SolrFacet _facet;
     public FacetItem _facetItem;
     public int _rowIndex;
+    public String _featureItem;
     
     private ERXDisplayGroup<Inventory> _displayGroup;
     private ERXSolrFetchSpecification<Inventory> _fetchSpecification;
@@ -79,17 +80,17 @@ public class Main extends BaseComponent {
 	        _fetchSpecification = new ERXSolrFetchSpecification<Inventory>(Inventory.ENTITY_NAME);
 	        _fetchSpecification.setBatchSize(Integer.valueOf(5));
 	        
-	        _fetchSpecification.setSortOrderings(Inventory.PRICE.descs());
+	        _fetchSpecification.setSortOrderings(Inventory.PRICE.ascs());
 	        
 	        // Facets
 	        SolrFacet priceQueryFacet = SolrFacet.newSolrFacet(Inventory.PRICE_KEY);
-	        priceQueryFacet.addQualifierForKey(Inventory.PRICE.lessThanOrEqualTo(Float.valueOf(100)), "Low Price");
-	        priceQueryFacet.addQualifierForKey(Inventory.PRICE.greaterThan(Float.valueOf(100)), "High Price");
+	        priceQueryFacet.addQualifierForKey(Inventory.PRICE.lessThanOrEqualTo(Double.valueOf(100)), "Low Price");
+	        priceQueryFacet.addQualifierForKey(Inventory.PRICE.greaterThan(Double.valueOf(100)), "High Price");
 	        _fetchSpecification.addFacet(priceQueryFacet);
 	        
 	        SolrFacet weightQueryFacet = SolrFacet.newSolrFacet(Inventory.WEIGHT_KEY);
-	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.lessThanOrEqualTo(Float.valueOf(50)), "50 lbs or under");
-	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.greaterThan(Float.valueOf(50)), "Over 50 lbs");
+	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.lessThanOrEqualTo(Double.valueOf(50)), "50 lbs or under");
+	        weightQueryFacet.addQualifierForKey(Inventory.WEIGHT.greaterThan(Double.valueOf(50)), "Over 50 lbs");
             _fetchSpecification.addFacet(weightQueryFacet);
 	        
             SolrFacet stockFacet = SolrFacet.newSolrFacet(Inventory.IN_STOCK_KEY);

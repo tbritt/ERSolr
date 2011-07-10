@@ -53,7 +53,7 @@
 						        <td><wo:str value = "$inventoryItem.sku" /></td>
 						        <td><wo:str value = "$inventoryItem.name" /></td>
 						        <td><wo:str value = "$inventoryItem.category" /></td>
-						        <td><wo:str value = "$inventoryItem.features" /></td>
+						        <td><ol><wo:loop list="$inventoryItem.features" item="$featureItem"><li><wo:str value="$featureItem" /></li></wo:loop></ol></td>
 						        <td><wo:str value = "$inventoryItem.inStock" /></td>
 						        <td><wo:str value = "$inventoryItem.manufacturer" /></td>
 						        <td><wo:str value = "$inventoryItem.popularity" /></td>
